@@ -52,8 +52,8 @@ class Net(nn.Module):
         return output
 
 def train():
-    # use GPU if available (depending on if im on my mac or windows)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # was originally gonna use gpu on my windows but cpu seems to work just fine 
+    device = "cpu"
     print(f"Using device: {device}")
 
     # hyperparameters
