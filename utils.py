@@ -32,13 +32,26 @@ def findPaper(img):
             approx = cv2.approxPolyDP(i, 0.05 * peri, True)
             # updates max value if the shape is a rectangle
             if area > maxArea and len(approx) == 4:
-                # checks if the shape is has interior angles < 180 degrees, it kept picking up random quadrilaterals
+                # further checks to make sure it doesnt pick up random garbage
+                # checks whether angles are all < 180 degree
                 if cv2.isContourConvex(approx):
                     # check aspect ratio to avoid weird long shapes
                     x, y, w, h = cv2.boundingRect(approx)
                     aspectRatio = float(w) / h
                     # paper is usually between 0.5 and 2.0 (portrait or landscape)
                     if 0.5 < aspectRatio < 2.0:
+                        # original order is what gets set as "biggest" because order determines how the polygon is drawn in main
+                        approxCopy = reorder(approx)
+                        # checks if it's roughly rectangular by making sure points are roughly vertical/horizontal
+                        threshold = 50
+                        if abs(approxCopy[0, 0, 1] - approxCopy[1, 0, 1]) > threshold:
+                            continue
+                        if abs(approxCopy[0, 0, 0] - approxCopy[2, 0, 0]) > threshold:
+                            continue
+                        if abs(approxCopy[1, 0, 0] - approxCopy[3, 0, 0]) > threshold:
+                            continue
+                        if abs(approxCopy[2, 0, 1] - approxCopy[3, 0, 1]) > threshold:
+                            continue
                         biggest = approx
                         maxArea = area
     return biggest, maxArea
@@ -68,7 +81,6 @@ def reorder(myPoints):
 
 # warps the image so that it's "facing" the camera (approximates what it would look like if we were looking at it dead on)
 def getWarp(img, biggest, widthImg=28, heightImg=28):
-    # corners of the paper can be in any order
     biggest = reorder(biggest)
     # coordinates in the current frame
     pts1 = np.float32(biggest)
