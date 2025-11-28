@@ -57,9 +57,10 @@ def train():
     print(f"Using device: {device}")
 
     # hyperparameters
-    batch_size = 16 # num of images to process at once
-    epochs = 1 # num of times to loop thru whole dataset (i do not have this kind of compute)
-    learning_rate = 0.01 # rate of change of params during training (W and b)
+    batch_size = 64 # num of images to process at once
+    epochs = 5 # num of times to loop thru whole dataset (i do not have this kind of compute)
+    learning_rate = 1.0 # rate of change of params during training (W and b)
+    # learning rate was initially 0.01, way too small
 
     # definition for how to transform the data from the dataset into something that the CNN can process
     transform = transforms.Compose([

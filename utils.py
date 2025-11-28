@@ -46,14 +46,15 @@ def findPaper(img):
                         threshold = 50
                         if abs(approxCopy[0, 0, 1] - approxCopy[1, 0, 1]) > threshold:
                             continue
-                        if abs(approxCopy[0, 0, 0] - approxCopy[2, 0, 0]) > threshold:
+                        elif abs(approxCopy[0, 0, 0] - approxCopy[2, 0, 0]) > threshold:
                             continue
-                        if abs(approxCopy[1, 0, 0] - approxCopy[3, 0, 0]) > threshold:
+                        elif abs(approxCopy[1, 0, 0] - approxCopy[3, 0, 0]) > threshold:
                             continue
-                        if abs(approxCopy[2, 0, 1] - approxCopy[3, 0, 1]) > threshold:
+                        elif abs(approxCopy[2, 0, 1] - approxCopy[3, 0, 1]) > threshold:
                             continue
-                        biggest = approx
-                        maxArea = area
+                        else:
+                            biggest = approx
+                            maxArea = area
     return biggest, maxArea
 
 # reorders the points of the paper to be in order: TL, TR, BL, BR. 
@@ -79,21 +80,36 @@ def reorder(myPoints):
     myPointsNew[2] = myPoints[np.argmax(diff)]
     return myPointsNew
 
-# warps the image so that it's "facing" the camera (approximates what it would look like if we were looking at it dead on)
+# warps the image so that it's in the 28x28 sized format, ready to be inputted into the model
 def getWarp(img, biggest, widthImg=28, heightImg=28):
     biggest = reorder(biggest)
     # coordinates in the current frame
-    pts1 = np.float32(biggest)
+    pts = np.float32(biggest)
     # coordinates in the frame we want ("facing the camera"), with sizes adjusted
+    # standard printer paper is 8.5 x 11, convert to this ratio first (scaled by factor of 20)
+    paper = np.float32([[0, 0], [170, 0], [0, 220], [170, 220]])
     #sizes of 28x28 since that's the size of pictures in the dataset used for training
-    pts2 = np.float32([[0, 0], [widthImg, 0], [0, heightImg], [widthImg, heightImg]])
-    # calculates the transformation matrix to go from first frame to the second (p much just linalg)
-    matrix = cv2.getPerspectiveTransform(pts1, pts2)
+    final = np.float32([[0, 0], [widthImg, 0], [0, heightImg], [widthImg, heightImg]])
+    
+    # calculates the transformation matrix to go from first frame to the paper's frame (p much just linalg)
+    transformMatrix = cv2.getPerspectiveTransform(pts, paper)
     # applies the transformation matrix on the original image
-    imgOutput = cv2.warpPerspective(img, matrix, (widthImg, heightImg))
+    # warp to 170x220 first (size of 'paper')
+    imgOutput = cv2.warpPerspective(img, transformMatrix, (170, 220))
     
-    # Crop slightly to remove borders (2 pixels on each side)
-    imgCropped = imgOutput[2:imgOutput.shape[0]-2, 2:imgOutput.shape[1]-2]
-    imgCropped = cv2.resize(imgCropped, (widthImg, heightImg))
-    
-    return imgCropped
+    # crop to be 170 x 170, squared image -> makes it so rescaling wont do weird stuff to the text
+    # additional 5 pixel on each side to remove border (if there is one)
+    # imgOutput is 170(W) x 220(H). We want to crop the height to make it square.
+    # (220 - 170) / 2 = 25 pixels to remove from top and bottom.
+    padding = int((220 - 170) / 2)
+    # crop Height: [padding+5 : 220-padding-5] -> [30 : 190] (Length 160)
+    # crop Width:  [5 : 170-5] -> [5 : 165] (Length 160)
+    imgOutput = imgOutput[padding + 5 : 220 - padding - 5, 5 : 170 - 5]
+    imgCropped = cv2.resize(imgOutput, (widthImg, heightImg), interpolation=cv2.INTER_AREA)
+
+    imgGray = cv2.cvtColor(imgCropped, cv2.COLOR_BGR2GRAY)
+    # adaptive thresholding creates a binary image (Black/White)
+    # ADAPTIVE_THRESH_GAUSSIAN_C calculates threshold based on neighborhood area
+    # THRESH_BINARY_INV gives us White Text on Black Background (which is what we want)
+    imgThres = cv2.adaptiveThreshold(imgGray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+    return imgThres

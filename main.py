@@ -47,11 +47,7 @@ def main():
         if biggest.size != 0:
             # gets processed image of the paper "facing" the camera
             imgWarped = utils.getWarp(imgOriginal, biggest)
-            
-            # converts to grayscale though im not sure it's necessary, try removing
-            imgGray = cv2.cvtColor(imgWarped, cv2.COLOR_BGR2GRAY)
-            # inverts colors since dataset has white colored numbers on black background
-            imgInv = cv2.bitwise_not(imgGray)
+
             
             #REST OF THIS IS NEURAL NETWORK STUFF
 
@@ -62,7 +58,7 @@ def main():
             ])
             # unsqueeze adds a fake dim at the beginning of tensor (batch dim specifying # of batches, as in training)
             # dims: batches, channels, height, width
-            imgTensor = transform(imgInv).unsqueeze(0).to(device)
+            imgTensor = transform(imgWarped).unsqueeze(0).to(device)
             
             # stops gradient calculation (since not training, no need to backpropogate)
             with torch.no_grad():
@@ -71,7 +67,7 @@ def main():
                 prediction = output.argmax(dim=1, keepdim=True).item()
                 confidence = torch.exp(output).max().item()
             
-            if confidence > 0.8:
+            if confidence > 0.9:
                 print(f"Prediction: {prediction} (Confidence: {confidence:.2f})")
                 
                 # draw on screen
@@ -79,6 +75,9 @@ def main():
                 
             # trace out the "paper" on the original image
             cv2.drawContours(imgOriginal, [biggest], -1, (0, 255, 0), 20)
+            
+            # debugging
+            cv2.imshow("Warped", imgWarped)
 
         cv2.imshow("Result", imgOriginal)
         cv2.waitKey(1)
