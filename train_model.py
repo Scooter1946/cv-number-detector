@@ -54,7 +54,6 @@ class Net(nn.Module):
 def train():
     # was originally gonna use gpu on my windows but cpu seems to work just fine 
     device = "cpu"
-    print(f"Using device: {device}")
 
     # hyperparameters
     batch_size = 64 # num of images to process at once

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+# returns a black and white image with only edges
 def preProcess(img):
     # convert to greyscale
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -55,7 +56,7 @@ def findPaper(img):
                         else:
                             biggest = approx
                             maxArea = area
-    return biggest, maxArea
+    return biggest
 
 # reorders the points of the paper to be in order: TL, TR, BL, BR. 
 def reorder(myPoints):

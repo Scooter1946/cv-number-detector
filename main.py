@@ -1,3 +1,24 @@
+"""
+Contributors:
+    Justin Chen, chen5731@purdue [repeat for each]
+
+    My contributor(s) helped me:
+    [ ] understand the assignment expectations without
+        telling me how they will approach it.
+    [ ] understand different ways to think about a solution
+        without helping me plan my solution.
+    [ ] think through the meaning of a specific error or
+        bug present in my code without looking at my code.
+    Note that if you helped somebody else with their code, you
+    have to list that person as a contributor here as well.
+
+Academic Integrity Statement:
+    I have not used source code obtained from any unauthorized
+    source, either modified or unmodified; nor have I provided
+    another student access to my code.  The project I am
+    submitting is my own original work.
+"""
+
 import cv2
 import numpy as np
 import torch
@@ -11,7 +32,6 @@ def main():
     
     # was originally gonna use gpu on my windows but cpu seems to work just fine
     device = "cpu" 
-    print(f"Using device: {device}")
 
     # loading model
     model = Net().to(device)
@@ -42,7 +62,7 @@ def main():
         # converts recieved image to only show edges
         imgThres = utils.preProcess(img)
         # finds the paper in the image
-        biggest, maxArea = utils.findPaper(imgThres)
+        biggest = utils.findPaper(imgThres)
         
         if biggest.size != 0:
             # gets processed image of the paper "facing" the camera
@@ -72,7 +92,8 @@ def main():
                 
                 # draw on screen
                 cv2.putText(imgOriginal, f"Number: {prediction}", (50, 50), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-                
+            elif confidence > 0.7: 
+                print("Error: Prediction is uncertain. Try changing the lighting or moving the image.")
             # trace out the "paper" on the original image
             cv2.drawContours(imgOriginal, [biggest], -1, (0, 255, 0), 20)
             
@@ -82,8 +103,6 @@ def main():
         cv2.imshow("Result", imgOriginal)
         cv2.waitKey(1)
 
-    cap.release()
-    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
