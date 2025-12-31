@@ -45,7 +45,7 @@ The following diagram illustrates how data moves through the application, from t
 
 `Webcam Feed` -> `Image Preprocessing (Grayscale, Blur, Canny)` -> `Paper Detection (Contour Finding)` -> `Perspective Transform (Warp & Crop)` -> `Adaptive Thresholding (Clean Up)` -> `Neural Network (CNN)` -> `Prediction (0-9)`
 
-## Key Features of Our CNN Architecture
+## Key Features of The CNN Architecture
 *   **Convolutional Layers (`nn.Conv2d`)**: These are the "eyes" of the network. They slide small filters (kernels) across the input image to create feature maps. Early layers might detect simple lines or edges, while deeper layers combine these to recognize complex shapes like loops or intersections.
 *   **ReLU Activation (`F.relu`)**: This function introduces non-linearity into the model. Without it, the network would just be a linear regression model. ReLU allows the network to learn complex, non-linear relationships between pixels.
 *   **Max Pooling (`F.max_pool2d`)**: This down-samples the feature maps, reducing their size while keeping the most important information (the strongest features). This makes the model more computationally efficient and helps it focus on the *presence* of a feature rather than its exact pixel location (making it translation invariant).
