@@ -1,53 +1,79 @@
 # Number Detector
 
-## Overview
-This application implements a real-time handwritten digit recognition system using OpenCV and PyTorch. It captures a live video feed, detects and isolates a paper region, and feeds the processed image into a Convolutional Neural Network (CNN) trained on the MNIST dataset to classify digits (0-9) with high accuracy.
+Real-time handwritten-digit recognition from a webcam. The app finds a piece of paper in the camera feed, flattens it to a clean top-down image, and runs it through a convolutional neural network (trained on MNIST) to read the digit (0–9) written on it.
 
+## Tech stack
 
-## Installation & Usage
+- **Python**
+- **OpenCV** — camera capture, edge detection, contour finding, perspective warp, thresholding
+- **PyTorch** — CNN definition, training, and inference
+- **torchvision** — MNIST dataset and image transforms
+- **NumPy**
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/Scooter1946/numberDetector.git
+## How it works
+
+Every frame is transformed step by step from a raw camera image into a normalized 28×28 tensor the network can classify:
+
+```mermaid
+flowchart TD
+    A["Webcam frame"] --> B["Preprocess<br/>grayscale, Canny edges, dilate/erode"]
+    B --> C["Find paper<br/>largest 4-corner convex contour"]
+    C --> D["Perspective warp<br/>flatten and crop to square"]
+    D --> E["Resize to 28×28<br/>adaptive threshold (white on black)"]
+    E --> F["CNN inference"]
+    F --> G{"Confidence > 0.9?"}
+    G -- Yes --> H["Display predicted digit"]
+    G -- No --> I["Ignore / prompt to adjust"]
 ```
 
-### 2. Set Up Virtual Environment (Recommended)
+Paper detection (`utils.py`) filters contours by area, four-corner convexity, and aspect ratio so it locks onto a sheet of paper rather than background clutter, then reorders the corners (TL, TR, BL, BR) before warping.
+
+## Model
+
+A compact CNN (`train_model.py`) trained on MNIST:
+
+`Conv(1→32) → ReLU → Conv(32→64) → ReLU → MaxPool → Dropout → Flatten → FC(9216→128) → ReLU → Dropout → FC(128→10) → LogSoftmax`
+
+- **Convolutional layers** extract features — edges and strokes early, loops and intersections deeper in.
+- **ReLU** adds the non-linearity that lets the network learn non-trivial mappings.
+- **Max pooling** down-samples, keeping the strongest activations and adding translation tolerance.
+- **Dropout** (25% / 50%) randomly disables neurons during training to curb overfitting.
+- **Fully connected layers** map the extracted features to the ten digit classes.
+
+Trained with Adadelta over 5 epochs (batch size 64) on CPU.
+
+## Project structure
+
+| File | Role |
+|---|---|
+| `main.py` | Webcam loop: detect paper, warp, classify, draw the prediction |
+| `utils.py` | OpenCV image processing (preprocess, find paper, perspective warp) |
+| `train_model.py` | CNN definition and MNIST training; saves `model.pth` |
+| `model.pth` | Pre-trained weights (included) |
+| `requirements.txt` | Dependencies |
+
+## Setup & usage
+
+**1. Clone**
 ```bash
-# Create virtual environment
+git clone https://github.com/Scooter1946/cv-number-detector.git
+cd cv-number-detector
+```
+
+**2. Install dependencies**
+```bash
 python -m venv venv
-
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-```bash
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Train the Model
-Before running the detector, you need to train the neural network to generate the `model.pth` file.
+**3. (Optional) Retrain the model** — a trained `model.pth` is already included:
 ```bash
 python train_model.py
 ```
 
-### 5. Run the Application
-Start the live camera feed and detection system.
+**4. Run**
 ```bash
 python main.py
 ```
-
-## Data Flow
-The following diagram illustrates how data moves through the application, from the camera lens to the final prediction:
-
-`Webcam Feed` -> `Image Preprocessing (Grayscale, Blur, Canny)` -> `Paper Detection (Contour Finding)` -> `Perspective Transform (Warp & Crop)` -> `Adaptive Thresholding (Clean Up)` -> `Neural Network (CNN)` -> `Prediction (0-9)`
-
-## Key Features of The CNN Architecture
-*   **Convolutional Layers (`nn.Conv2d`)**: These are the "eyes" of the network. They slide small filters (kernels) across the input image to create feature maps. Early layers might detect simple lines or edges, while deeper layers combine these to recognize complex shapes like loops or intersections.
-*   **ReLU Activation (`F.relu`)**: This function introduces non-linearity into the model. Without it, the network would just be a linear regression model. ReLU allows the network to learn complex, non-linear relationships between pixels.
-*   **Max Pooling (`F.max_pool2d`)**: This down-samples the feature maps, reducing their size while keeping the most important information (the strongest features). This makes the model more computationally efficient and helps it focus on the *presence* of a feature rather than its exact pixel location (making it translation invariant).
-*   **Dropout (`nn.Dropout`)**: To prevent the model from simply memorizing the training data (overfitting), dropout randomly "turns off" a percentage of neurons during training. This forces the network to learn redundant pathways and robust features, ensuring it performs well on new, messy handwriting it hasn't seen before.
-*   **Fully Connected Layers (`nn.Linear`)**: These are the final decision makers. They take the high-level abstract features extracted by the convolutional layers and map them to the 10 possible output classes (digits 0-9).
+Hold a digit written on paper up to the camera. A prediction is shown only when the model is more than 90% confident.
